@@ -1,8 +1,9 @@
 import os
 from flask import Flask, request, jsonify
-from werkzeug.security import generate_password_hash
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from werkzeug.security import generate_password_hash, check_password_hash
 from database import db
-from models import User
+from models import User, Memo
 
 
 #Flask application reset
@@ -21,6 +22,7 @@ db.init_app(app)
 def home() :
     return {"message" : "서버가 정상적으로 실행중입니다.", "status": "success"}
 
+#회원가입 api
 @app.route('/register', methods=['POST'])
 def register() :
     #data from client
@@ -43,6 +45,59 @@ def register() :
 
     return jsonify({"message": "회원가입 성공!", "username": username}), 201
 
+#로그인 api
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+
+    user = User.query.filter_by(username=username).fist()
+
+    if user and check_password_hash(user.password, password):
+        access_token = create_access_token(identity=user.username)
+
+        return jsonify({
+            "message" : "로그인 성공",
+            "access_token": access_token
+        })
+    else :
+        return jsonify({"message" : "로그인 실패"})
+
+#writing memo
+@app.route('/memo', methods=['POST'])
+@jwt_required()
+def create_memo() :
+    current_username = get_jwt_identity()
+    user = User.query.filter_by(username=current_username).first()
+
+    data = request.get_json()
+    content = data.get('content')
+
+    if not content :
+        return jsonify({"message" : "내용이 없습니다."}), 400
+    
+    new_memo = Memo(content = content, user_id=user.id)
+    db.session.add(new_memo)
+    db.session.commit()
+
+    return jsonify({"message" : "메모가 저장되었습니다."}), 201
+
+#viewing memo
+@app.route('/memo', methods=['GET'])
+@jwt_required()
+def get_memos():
+    current_username = get_jwt_identity()
+    user = User.query.filter_by(username=current_username).first()
+
+    memos = user.memos
+
+    output = []
+    for memo in memos :
+        output.append({"id" : memo.id, "content" : memo.content})
+
+    return jsonify({"memos" : output}), 200
+
 # app execution (debug = True, 코드가 수정될 때마다 서버가 자동 재시작.)
 if __name__ == '__main__':
     with app.app_context():
@@ -50,4 +105,3 @@ if __name__ == '__main__':
         print("데이터베이스 테이블이 생성되었습니다!") # 확인 메시지
 
     app.run(debug=True)
-
