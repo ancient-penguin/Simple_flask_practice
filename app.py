@@ -14,8 +14,17 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///app.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False #불필요한 이벤트 처리 비활성화 
 
+#한글 에러 처리
+app.json.ensure_ascii = False
+
+#JWT secret key
+app.config['JWT_SECRET_KEY'] = 'super-secret-key'
+
 #creating DB
 db.init_app(app)
+
+#JWT manger reset
+jwt = JWTManager(app)
 
 #default path
 @app.route('/')
@@ -51,8 +60,8 @@ def login():
     data = request.get_json()
     username = data.get('username')
     password = data.get('password')
-
-    user = User.query.filter_by(username=username).fist()
+    
+    user = User.query.filter_by(username=username).first()
 
     if user and check_password_hash(user.password, password):
         access_token = create_access_token(identity=user.username)
@@ -60,9 +69,9 @@ def login():
         return jsonify({
             "message" : "로그인 성공",
             "access_token": access_token
-        })
+        }), 200
     else :
-        return jsonify({"message" : "로그인 실패"})
+        return jsonify({"message" : "로그인 실패"}), 401
 
 #writing memo
 @app.route('/memo', methods=['POST'])
@@ -98,10 +107,48 @@ def get_memos():
 
     return jsonify({"memos" : output}), 200
 
+#update memo
+@app.route('/memo/<int:memo_id>', methods=['PUT'])
+@jwt_required()
+def update_memos(memo_id):
+    current_username = get_jwt_identity()
+
+    memo = Memo.query.get_or_404(memo_id)
+
+    if memo.author.username != current_username :
+        return jsonify({"message" : "수정 권한이 없습니다. "}), 403
+
+    data = request.get_json()
+    new_content = data.get('content')
+
+    if new_content :
+        memo.content = new_content
+        db.session.commit()
+        return jsonify({"message" : "메모가 수정되었습니다.", "content": memo.content}), 200
+    else :
+        return jsonify({"message" : "내용을 입력해주세요."}), 400
+    
+#delete memo
+@app.route('/memo/<int:memo_id>', methods=['DELETE'])
+@jwt_required()
+def delete_memo(memo_id) :
+    current_username = get_jwt_identity()
+
+    memo = Memo.query.get_or_404(memo_id)
+
+    if memo.author.username != current_username:
+        return jsonify({"message" : "삭제 권한이 없습니다."}), 403
+    
+    db.session.delete(memo)
+    db.session.commit()
+
+    return jsonify({"message" : "메모가 삭제되었습니다."}), 200
+
+
 # app execution (debug = True, 코드가 수정될 때마다 서버가 자동 재시작.)
 if __name__ == '__main__':
     with app.app_context():
         db.create_all()
         print("데이터베이스 테이블이 생성되었습니다!") # 확인 메시지
 
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)
