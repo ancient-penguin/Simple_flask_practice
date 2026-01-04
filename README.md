@@ -1,2 +1,11 @@
-# Flask
-It is for practice flask. 
+#Flask Memo API
+Flask와 SQLite를 사용하여 간단한 메모장 API를 개발
+회원가입, 로그인(JWT 인증) & CRUD 기능을 구현
+
+#기능
+- 인증 : 회원가입, 로그인 (JWT 토큰 발급)
+- 메모 : 작성, 조회, 수정, 삭제 (본인 글 한정으로 제어 가능)
+- 테스트 : 성공사례와 에러 사례를 검증하는 테스크 코드 포함
+
+#기술 스택
+* Python, Flask
