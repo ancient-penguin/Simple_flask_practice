@@ -38,7 +38,7 @@ print(f"작성 결과: {create_res.status_code}")
 # 작성한 메모 ID 알아내기 (가장 최근 것)
 my_memos = requests.get(f"{BASE_URL}/memo", headers=headers).json()['memos']
 target_id = my_memos[-1]['id']
-print(f"👉 방금 작성한 메모 번호: {target_id}번")
+print(f"방금 작성한 메모 번호: {target_id}번")
 
 # [Step 3] 메모 수정
 print(f"\n=== 4. {target_id}번 메모 수정 (PUT) ===")
@@ -55,4 +55,4 @@ print(f"\n=== 5. {target_id}번 메모 삭제 (DELETE) ===")
 delete_res = requests.delete(f"{BASE_URL}/memo/{target_id}", headers=headers)
 print(f"삭제 상태: {delete_res.status_code}")
 
-print("\n--- 🎉 모든 테스트 완료! ---")
+print("\n--- 모든 테스트 완료! ---") 

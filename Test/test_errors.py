@@ -1,4 +1,4 @@
-import requests
+import requests 
 import random
 
 BASE_URL = "http://localhost:5000"
